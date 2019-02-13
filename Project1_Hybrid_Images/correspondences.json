@@ -1,0 +1,32 @@
+{
+  "first_image_points": [
+    [
+      279.9805447470817, 
+      409.9582245430809
+    ], 
+    [
+      274.2373540856031, 
+      602.0365535248042
+    ], 
+    [
+      387.6653696498054, 
+      505.99738903394257
+    ]
+  ], 
+  "second_image_points": [
+    [
+      237.6628895184136, 
+      496.9543147208122
+    ], 
+    [
+      232.07082152974505, 
+      677.4957698815567
+    ], 
+    [
+      349.5042492917847, 
+      593.7394247038917
+    ]
+  ], 
+  "first_image": "/Users/dan/Documents/CornellTech/cs5670/Project1_Hybrid_Images/Hillary_Clinton_official_Secretary_of_State_portrait_crop.jpg", 
+  "second_image": "/Users/dan/Documents/CornellTech/cs5670/Project1_Hybrid_Images/160118134132-donald-trump-nigel-parry-full-169.jpg"
+}
