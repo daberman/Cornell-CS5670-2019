@@ -175,9 +175,9 @@ class ImageAlignmentFrame(uiutils.BaseFrame):
 
     def process_compute(self):
         mapping = self.get_mapping()
-        assert mapping is not None and mapping.shape == (2, 3)
-        assert self.image_receiver is not None
-        if mapping is not None:
+        # assert mapping is not None and mapping.shape == (2, 3)
+        # assert self.image_receiver is not None
+        if mapping is not None and self.image_receiver is not None:
             self.image_receiver(self.left_image_widget.get_image(),
                                 self.right_image_widget.get_image(), mapping)
 

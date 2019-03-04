@@ -2,3 +2,4 @@
 
 Published assignment 1
 
+Published assignment 2
