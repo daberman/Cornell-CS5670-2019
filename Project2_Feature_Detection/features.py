@@ -115,13 +115,20 @@ class HarrisKeypointDetector(KeypointDetector):
         harrisImage = np.zeros(srcImage.shape[:2])
         orientationImage = np.zeros(srcImage.shape[:2])
 
-        # TODO 1: Compute the harris corner strength for 'srcImage' at
         # each pixel and store in 'harrisImage'.  See the project page
         # for direction on how to do this. Also compute an orientation
         # for each pixel and store it in 'orientationImage.'
-        # TODO-BLOCK-BEGIN
-        raise Exception("TODO 1: in features.py not implemented")
-        # TODO-BLOCK-END
+        dx = ndimage.sobel(srcImage, axis=1)
+        dy = ndimage.sobel(srcImage, axis=0)
+        wdx2 = ndimage.gaussian_filter(dx*dx, sigma=.5)
+        wdy2 = ndimage.gaussian_filter(dy*dy, sigma=.5)
+        wdxdy = ndimage.gaussian_filter(dx*dy, sigma=.5)
+        for i in range(height):
+            for j in range(width):
+                h = [[wdx2[i, j], wdxdy[i, j]], [wdxdy[i, j], wdy2[i, j]]]
+                c = np.linalg.det(h) - 0.1 * (np.trace(h) ** 2)
+                harrisImage[i, j] = c
+        orientationImage = np.rad2deg(np.arctan2(dy, dx))
 
         # Save the harris image as harris.png for the website assignment
         self.saveHarrisImage(harrisImage, srcImage)
@@ -141,10 +148,10 @@ class HarrisKeypointDetector(KeypointDetector):
         '''
         destImage = np.zeros_like(harrisImage, np.bool)
 
-        # TODO 2: Compute the local maxima image
-        # TODO-BLOCK-BEGIN
-        raise Exception("TODO 2: in features.py not implemented")
-        # TODO-BLOCK-END
+        maxArr = ndimage.maximum_filter(harrisImage, size=7)
+        for i in range(harrisImage.shape[0]):
+            for j in range(harrisImage.shape[1]):
+                destImage[i, j] = maxArr[i, j] == harrisImage[i, j]
 
         return destImage
 
@@ -186,13 +193,10 @@ class HarrisKeypointDetector(KeypointDetector):
 
                 f = cv2.KeyPoint()
 
-                # TODO 3: Fill in feature f with location and orientation
-                # data here. Set f.size to 10, f.pt to the (x,y) coordinate,
-                # f.angle to the orientation in degrees and f.response to
-                # the Harris score
-                # TODO-BLOCK-BEGIN
-                raise Exception("TODO 3: in features.py not implemented")
-                # TODO-BLOCK-END
+                f.size = 10
+                f.pt = (x, y)
+                f.angle = orientationImage[y, x]
+                f.response = harrisImage[y, x]
 
                 features.append(f)
 
@@ -232,7 +236,6 @@ class FeatureDescriptor(object):
 
 
 class SimpleFeatureDescriptor(FeatureDescriptor):
-    # TODO: Implement parts of this function
     def describeFeatures(self, image, keypoints):
         '''
         Input:
@@ -251,18 +254,15 @@ class SimpleFeatureDescriptor(FeatureDescriptor):
             x, y = f.pt
             x, y = int(x), int(y)
 
-            # TODO 4: The simple descriptor is a 5x5 window of intensities
-            # sampled centered on the feature point. Store the descriptor
-            # as a row-major vector. Treat pixels outside the image as zero.
-            # TODO-BLOCK-BEGIN
-            raise Exception("TODO 4: in features.py not implemented")
-            # TODO-BLOCK-END
+            for r in range(y-2, y+3):
+                for c in range(x-2, x+3):
+                    if inbounds(grayImage.shape, (r, c)):
+                        desc[i, (r - y + 2)*5 + (c - x + 2)] = grayImage[r, c]
 
         return desc
 
 
 class MOPSFeatureDescriptor(FeatureDescriptor):
-    # TODO: Implement parts of this function
     def describeFeatures(self, image, keypoints):
         '''
         Input:
@@ -283,28 +283,30 @@ class MOPSFeatureDescriptor(FeatureDescriptor):
         grayImage = ndimage.gaussian_filter(grayImage, 0.5)
 
         for i, f in enumerate(keypoints):
-            # TODO 5: Compute the transform as described by the feature
-            # location/orientation. You will need to compute the transform
-            # from each pixel in the 40x40 rotated window surrounding
-            # the feature to the appropriate pixels in the 8x8 feature
-            # descriptor image.
+
             transMx = np.zeros((2, 3))
 
-            # TODO-BLOCK-BEGIN
-            raise Exception("TODO 5: in features.py not implemented")
-            # TODO-BLOCK-END
+            t1_x = - f.pt[0]
+            t1_y = - f.pt[1]
+            t1_mat = transformations.get_trans_mx(np.array([t1_x, t1_y, 0]))[(0, 1, 3), :][:, (0, 1, 3)]
+            rot_mat = transformations.get_rot_mx(0, 0, - np.deg2rad(f.angle))[(0, 1, 3), :][:, (0, 1, 3)]
+            s_mat = transformations.get_scale_mx(0.2, 0.2, 0)[(0, 1, 3), :][:, (0, 1, 3)]
+            t2_mat = transformations.get_trans_mx(np.array([4, 4, 0]))[(0, 1, 3), :][:, (0, 1, 3)]
+            transMx = (np.matmul(t2_mat, np.matmul(s_mat, np.matmul(rot_mat, t1_mat))))
+            transMx = transMx[:2]
 
             # Call the warp affine function to do the mapping
             # It expects a 2x3 matrix
             destImage = cv2.warpAffine(grayImage, transMx,
                 (windowSize, windowSize), flags=cv2.INTER_LINEAR)
 
-            # TODO 6: Normalize the descriptor to have zero mean and unit
-            # variance. If the variance is zero then set the descriptor
-            # vector to zero. Lastly, write the vector to desc.
-            # TODO-BLOCK-BEGIN
-            raise Exception("TODO 6: in features.py not implemented")
-            # TODO-BLOCK-END
+            std = np.std(destImage)
+            if std < 10 ** (-5):
+                desc[i] = 0
+            else:
+                destImage -= np.mean(destImage)
+                destImage /= std
+                desc[i] = np.reshape(destImage, (windowSize**2))
 
         return desc
 
@@ -423,14 +425,10 @@ class SSDFeatureMatcher(FeatureMatcher):
         if desc1.shape[0] == 0 or desc2.shape[0] == 0:
             return []
 
-        # TODO 7: Perform simple feature matching.  This uses the SSD
-        # distance between two feature vectors, and matches a feature in
-        # the first image with the closest feature in the second image.
-        # Note: multiple features from the first image may match the same
-        # feature in the second image.
-        # TODO-BLOCK-BEGIN
-        raise Exception("TODO 7: in features.py not implemented")
-        # TODO-BLOCK-END
+        dists = scipy.spatial.distance.cdist(desc1, desc2)
+        for i in range(dists.shape[0]):
+            match = cv2.DMatch(i, np.argmin(dists[i]), np.min(dists[i]))
+            matches.append(match)
 
         return matches
 
@@ -463,16 +461,11 @@ class RatioFeatureMatcher(FeatureMatcher):
         if desc1.shape[0] == 0 or desc2.shape[0] == 0:
             return []
 
-        # TODO 8: Perform ratio feature matching.
-        # This uses the ratio of the SSD distance of the two best matches
-        # and matches a feature in the first image with the closest feature in the
-        # second image.
-        # Note: multiple features from the first image may match the same
-        # feature in the second image.
-        # You don't need to threshold matches in this function
-        # TODO-BLOCK-BEGIN
-        raise Exception("TODO 8: in features.py not implemented")
-        # TODO-BLOCK-END
+        dists = scipy.spatial.distance.cdist(desc1, desc2)
+        for i in range(dists.shape[0]):
+            dist = np.partition(dists[i], 1)[:2]
+            match = cv2.DMatch(i, np.argmin(dists[i]), dist[0] / dist[1])
+            matches.append(match)
 
         return matches
 
