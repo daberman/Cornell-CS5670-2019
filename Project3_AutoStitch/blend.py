@@ -29,7 +29,22 @@ def imageBoundingBox(img, M):
     """
     #TODO 8
     #TODO-BLOCK-BEGIN
-    raise Exception("TODO in blend.py not implemented")
+    minX = np.inf
+    minY = np.inf
+    maxX = -np.inf
+    maxY = -np.inf
+    for y in range(img.shape[0]):
+        for x in range(img.shape[1]):
+            xy_trans = np.matmul(M, [x, y, 1])
+            xy_trans /= xy_trans[2]
+            if xy_trans[0] < minX:
+                minX = xy_trans[0]
+            elif xy_trans[0] > maxX:
+                maxX = xy_trans[0]
+            if xy_trans[1] < minY:
+                minY = xy_trans[1]
+            elif xy_trans[1] > maxY:
+                maxY = xy_trans[1]
     #TODO-BLOCK-END
     return int(minX), int(minY), int(maxX), int(maxY)
 
@@ -49,7 +64,49 @@ def accumulateBlend(img, acc, M, blendWidth):
     # BEGIN TODO 10
     # Fill in this routine
     #TODO-BLOCK-BEGIN
-    raise Exception("TODO in blend.py not implemented")
+    for ay in range(acc.shape[0]):
+        for ax in range(acc.shape[1]):
+            # Inverse warp acc to get img coords
+            M_inv = np.linalg.inv(M)
+            x, y, z = np.matmul(M_inv, [ax, ay, 1])
+            x = x / z
+            y = y / z
+            # Check in bounds
+            if x < 0 or x > img.shape[1]-1 or y < 0 or y > img.shape[0]-1:
+                continue
+
+            # Linear interpolation of img pixels for RGB value
+            percent_x = x - np.floor(x)
+            percent_y = y - np.floor(y)
+            r, g, b = percent_x * percent_y * img[int(np.ceil(y)), int(np.ceil(x))]
+            _r, _g, _b = (1-percent_x) * percent_y * img[int(np.ceil(y)), int(np.floor(x))]
+            r += _r
+            g += _g
+            b += _b
+            _r, _g, _b = percent_x * (1-percent_y) * img[int(np.floor(y)), int(np.ceil(x))]
+            r += _r
+            g += _g
+            b += _b
+            _r, _g, _b = (1-percent_x) * (1-percent_y) * img[int(np.floor(y)), int(np.floor(x))]
+            r += _r
+            g += _g
+            b += _b
+
+            # Check not black
+            if r == 0 and g == 0 and b == 0:
+                continue
+
+            alpha = 1
+
+            # Check if x within blendWidth
+            if x < blendWidth:
+                alpha = (x + 1.0) / (blendWidth + 1.0)
+            elif img.shape[1] - x < blendWidth:
+                alpha = float(img.shape[1] - x) / (blendWidth + 1.0)
+
+            acc[ay, ax] += [r * alpha, g * alpha, b * alpha, alpha]
+
+
     #TODO-BLOCK-END
     # END TODO
 
@@ -65,7 +122,13 @@ def normalizeBlend(acc):
     # BEGIN TODO 11
     # fill in this routine..
     #TODO-BLOCK-BEGIN
-    raise Exception("TODO in blend.py not implemented")
+    img = np.zeros((acc.shape[0], acc.shape[1], 3))
+    for ay in range(acc.shape[0]):
+        for ax in range(acc.shape[1]):
+            if acc[ay, ax, 3] > 0:
+                img[ay, ax] = acc[ay, ax, :3] / acc[ay, ax, 3]
+            else:
+                img[ay, ax] = acc[ay, ax, :3]
     #TODO-BLOCK-END
     # END TODO
     return img
@@ -107,7 +170,11 @@ def getAccSize(ipv):
         # BEGIN TODO 9
         # add some code here to update minX, ..., maxY
         #TODO-BLOCK-BEGIN
-        raise Exception("TODO in blend.py not implemented")
+        _minX, _minY, _maxX, _maxY = imageBoundingBox(img, M)
+        minX = min(_minX, minX)
+        minY = min(_minY, minY)
+        maxX = max(_maxX, maxX)
+        maxY = max(_maxY, maxY)
         #TODO-BLOCK-END
         # END TODO
 
@@ -199,7 +266,8 @@ def blendImages(ipv, blendWidth, is360=False, A_out=None):
     # Note: warpPerspective does forward mapping which means A is an affine
     # transform that maps accumulator coordinates to final panorama coordinates
     #TODO-BLOCK-BEGIN
-    raise Exception("TODO in blend.py not implemented")
+    if is360:
+        A = computeDrift(x_init, y_init, x_final, y_final, width)
     #TODO-BLOCK-END
     # END TODO
 
