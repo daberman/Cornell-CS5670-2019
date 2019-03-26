@@ -279,5 +279,5 @@ def blendImages(ipv, blendWidth, is360=False, A_out=None):
         compImage, A, (outputWidth, accHeight), flags=cv2.INTER_LINEAR
     )
 
-    return croppedImage
+    return croppedImage.astype('uint8')
 
