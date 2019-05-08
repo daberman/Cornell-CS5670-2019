@@ -1,12 +1,9 @@
-# Please place imports here.
-# BEGIN IMPORTS
 import time
 from math import floor
 import numpy as np
 import cv2
 from scipy.sparse import csr_matrix
-# import util_sweep
-# END IMPORTS
+import util_sweep
 
 
 def compute_photometric_stereo_impl(lights, images):
@@ -27,14 +24,12 @@ def compute_photometric_stereo_impl(lights, images):
                   same viewpoint, but under the lighting condition specified in
                   lights.
     Output:
-        albedo -- float32 height x width x 3 image with dimensions matching the
-                  input images.
+        albedo -- float32 image. When the input 'images' are RGB, it should be of dimension height x width x 3,
+                  while in the case of grayscale 'images', the dimension should be height x width x 1.
         normals -- float32 height x width x 3 image with dimensions matching
                    the input images.
     """
     raise NotImplementedError()
-
-
 
 
 def project_impl(K, Rt, points):
@@ -48,7 +43,6 @@ def project_impl(K, Rt, points):
         projections -- height x width x 2 array of 2D projections
     """
     raise NotImplementedError()
-
 
 
 def preprocess_ncc_impl(image, ncc_size):
@@ -90,13 +84,13 @@ def preprocess_ncc_impl(image, ncc_size):
     +------+------+  +------+------+  v
     width ------->
 
-    v = [ x111, x121, x211, x112, x112, x122, x212, x222 ]
+    v = [ x111, x121, x211, x221, x112, x122, x212, x222 ]
 
     see order argument in np.reshape
 
     Input:
         image -- height x width x channels image of type float32
-        ncc_size -- integer width and height of NCC patch region.
+        ncc_size -- integer width and height of NCC patch region; assumed to be odd
     Output:
         normalized -- heigth x width x (channels * ncc_size**2) array
     """
